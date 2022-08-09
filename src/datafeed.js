@@ -64,6 +64,7 @@ async function getAllSymbols() {
 
 export default {
 	onReady: (callback) => {
+		// set configs.
 		setTimeout(() => callback(configurationData));
 	},
 
