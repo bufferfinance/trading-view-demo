@@ -64,7 +64,6 @@ async function getAllSymbols() {
 
 export default {
 	onReady: (callback) => {
-		console.log('[onReady]: Method call');
 		setTimeout(() => callback(configurationData));
 	},
 
@@ -74,7 +73,6 @@ export default {
 		symbolType,
 		onResultReadyCallback,
 	) => {
-		console.log('[searchSymbols]: Method call');
 		const symbols = await getAllSymbols();
 		const newSymbols = symbols.filter(symbol => {
 			const isExchangeValid = exchange === '' || symbol.exchange === exchange;
@@ -91,13 +89,11 @@ export default {
 		onSymbolResolvedCallback,
 		onResolveErrorCallback,
 	) => {
-		console.log('[resolveSymbol]: Method call', symbolName);
 		const symbols = await getAllSymbols();
 		const symbolItem = symbols.find(({
 			full_name,
 		}) => full_name === symbolName);
 		if (!symbolItem) {
-			console.log('[resolveSymbol]: Cannot resolve symbol', symbolName);
 			onResolveErrorCallback('cannot resolve symbol');
 			return;
 		}
@@ -119,13 +115,11 @@ export default {
 			data_status: 'streaming',
 		};
 
-		console.log('[resolveSymbol]: Symbol resolved', symbolName);
 		onSymbolResolvedCallback(symbolInfo);
 	},
 
 	getBars: async (symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) => {
 		const { from, to, firstDataRequest } = periodParams;
-		console.log('[getBars]: Method call', symbolInfo, resolution, from, to);
 		const parsedSymbol = parseFullSymbol(symbolInfo.full_name);
 		const urlParameters = {
 			e: parsedSymbol.exchange,
@@ -138,6 +132,15 @@ export default {
 			.map(name => `${name}=${encodeURIComponent(urlParameters[name])}`)
 			.join('&');
 		try {
+			const tempData = await fetch(`https://api-v2.buffer.finance/binary/ETH/tickers?environment=mumbai-test`);
+			const d = await tempData.json();
+
+			/*
+			
+			5: {time: 1658906015, high: 1466.27, low: 0, open: 0, close: 1466.27}
+			*/
+
+
 			const data = await makeApiRequest(`data/histoday?${query}`);
 			if (data.Response && data.Response === 'Error' || data.Data.length === 0) {
 				// "noData" should be set if there is no data in the requested period.
@@ -147,28 +150,35 @@ export default {
 				return;
 			}
 			let bars = [];
-			data.Data.forEach(bar => {
+			const n = d.length;
+			console.log(from, 'from');
+			console.log(to, 'to');
+
+			d.forEach((bar, idx) => {
 				if (bar.time >= from && bar.time < to) {
 					bars = [...bars, {
 						time: bar.time * 1000,
 						low: bar.low,
+						isBarClosed: (idx < n - 1) ? true : false,
+						isLastBar: (idx == n - 1) ? true : false,
 						high: bar.high,
 						open: bar.open,
 						close: bar.close,
 					}];
 				}
 			});
+			console.log(`bars: `, bars);
+
+
 			if (firstDataRequest) {
 				lastBarsCache.set(symbolInfo.full_name, {
 					...bars[bars.length - 1],
 				});
 			}
-			console.log(`[getBars]: returned ${bars.length} bar(s)`);
 			onHistoryCallback(bars, {
 				noData: false,
 			});
 		} catch (error) {
-			console.log('[getBars]: Get error', error);
 			onErrorCallback(error);
 		}
 	},
@@ -180,7 +190,6 @@ export default {
 		subscribeUID,
 		onResetCacheNeededCallback,
 	) => {
-		console.log('[subscribeBars]: Method call with subscribeUID:', subscribeUID);
 		subscribeOnStream(
 			symbolInfo,
 			resolution,
@@ -192,7 +201,6 @@ export default {
 	},
 
 	unsubscribeBars: (subscriberUID) => {
-		console.log('[unsubscribeBars]: Method call with subscriberUID:', subscriberUID);
 		unsubscribeFromStream(subscriberUID);
 	},
 };

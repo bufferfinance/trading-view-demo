@@ -4,11 +4,9 @@ const socket = io('wss://streamer.cryptocompare.com');
 const channelToSubscription = new Map();
 
 socket.on('connect', () => {
-	console.log('[socket] Connected');
 });
 
 socket.on('disconnect', (reason) => {
-	console.log('[socket] Disconnected:', reason);
 });
 
 socket.on('error', (error) => {
@@ -16,7 +14,6 @@ socket.on('error', (error) => {
 });
 
 socket.on('m', data => {
-	console.log('[socket] Message:', data);
 	const [
 		eventTypeStr,
 		exchange,
@@ -37,6 +34,9 @@ socket.on('m', data => {
 	const tradeTime = parseInt(tradeTimeStr);
 	const channelString = `0~${exchange}~${fromSymbol}~${toSymbol}`;
 	const subscriptionItem = channelToSubscription.get(channelString);
+	console.log(channelString, 'channelString')
+	console.log(`subscriptionItem: `, subscriptionItem);
+
 	if (subscriptionItem === undefined) {
 		return;
 	}
@@ -52,7 +52,6 @@ socket.on('m', data => {
 			low: tradePrice,
 			close: tradePrice,
 		};
-		console.log('[socket] Generate new bar', bar);
 	} else {
 		bar = {
 			...lastDailyBar,
@@ -60,7 +59,6 @@ socket.on('m', data => {
 			low: Math.min(lastDailyBar.low, tradePrice),
 			close: tradePrice,
 		};
-		console.log('[socket] Update the latest bar by price', tradePrice);
 	}
 	subscriptionItem.lastDailyBar = bar;
 

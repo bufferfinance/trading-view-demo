@@ -27,15 +27,12 @@ Let's create a new file called [streaming.js][streaming-file-url], where we'll i
 const socket = io('wss://streamer.cryptocompare.com');
 
 socket.on('connect', () => {
-    console.log('[socket] Connected');
 });
 
 socket.on('disconnect', (reason) => {
-    console.log('[socket] Disconnected:', reason);
 });
 
 socket.on('error', (error) => {
-    console.log('[socket] Error:', error);
 });
 
 export function subscribeOnStream() {
@@ -172,7 +169,6 @@ In addition, we now have to pick only trade events from all [event types][crypto
 ```javascript
 // ...
 socket.on('m', data => {
-    console.log('[socket] Message:', data);
     const [
         eventTypeStr,
         exchange,
@@ -203,7 +199,6 @@ socket.on('m', data => {
         low: Math.min(lastDailyBar.low, tradePrice),
         close: tradePrice,
     };
-    console.log('[socket] Update the latest bar by price', tradePrice);
     subscriptionItem.lastDailyBar = bar;
 
     // send data to every subscriber of that symbol
@@ -253,7 +248,6 @@ socket.on('m', data => {
             low: tradePrice,
             close: tradePrice,
         };
-        console.log('[socket] Generate new bar', bar);
     } else {
         bar = {
             ...lastDailyBar,
@@ -261,7 +255,6 @@ socket.on('m', data => {
             low: Math.min(lastDailyBar.low, tradePrice),
             close: tradePrice,
         };
-        console.log('[socket] Update the latest bar by price', tradePrice);
     }
     subscriptionItem.lastDailyBar = bar;
     //...
