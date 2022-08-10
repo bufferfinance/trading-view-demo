@@ -1,64 +1,41 @@
-import {
-	makeApiRequest,
-	generateSymbol,
-	parseFullSymbol,
-} from './helpers.js';
-import {
-	subscribeOnStream,
-	unsubscribeFromStream,
-} from './streaming.js';
+import { makeApiRequest, generateSymbol, parseFullSymbol } from "./helpers.js";
+import { subscribeOnStream, unsubscribeFromStream } from "./streaming.js";
 
 const lastBarsCache = new Map();
 
 const configurationData = {
-	supported_resolutions: ['1D', '1W', '1M'],
-	exchanges: [{
-		value: 'Bitfinex',
-		name: 'Bitfinex',
-		desc: 'Bitfinex',
-	},
-	{
-		// `exchange` argument for the `searchSymbols` method, if a user selects this exchange
-		value: 'Kraken',
-
-		// filter name
-		name: 'Kraken',
-
-		// full exchange name displayed in the filter popup
-		desc: 'Kraken bitcoin exchange',
-	},
+	supported_resolutions: ["4H", "1D", "1W", "1M"],
+	exchanges: [
+		{
+			value: "Buffer",
+			name: "Buffer",
+			desc: "Buffer Finance",
+		},
 	],
-	symbols_types: [{
-		name: 'crypto',
+	symbols_types: [
+		{
+			name: "crypto",
 
-		// `symbolType` argument for the `searchSymbols` method, if a user selects this symbol type
-		value: 'crypto',
-	},
+			// `symbolType` argument for the `searchSymbols` method, if a user selects this symbol type
+			value: "crypto",
+		},
 		// ...
 	],
 };
 
 async function getAllSymbols() {
-	const data = await makeApiRequest('data/v3/all/exchanges');
-	let allSymbols = [];
-
-	for (const exchange of configurationData.exchanges) {
-		const pairs = data.Data[exchange.value].pairs;
-
-		for (const leftPairPart of Object.keys(pairs)) {
-			const symbols = pairs[leftPairPart].map(rightPairPart => {
-				const symbol = generateSymbol(exchange.value, leftPairPart, rightPairPart);
-				return {
-					symbol: symbol.short,
-					full_name: symbol.full,
-					description: symbol.short,
-					exchange: exchange.value,
-					type: 'crypto',
-				};
-			});
-			allSymbols = [...allSymbols, ...symbols];
+	const data = await makeApiRequest("data/v3/all/exchanges");
+	let allSymbols = [
+		{
+			symbol: 'ETHUSD',
+			full_name: "ETH_USD",
+			description: 'ETHUSD',
+			exchange: 'Buffer',
+			type: 'crypto'
 		}
-	}
+	];
+
+
 	return allSymbols;
 }
 
@@ -72,14 +49,20 @@ export default {
 		userInput,
 		exchange,
 		symbolType,
-		onResultReadyCallback,
+		onResultReadyCallback
 	) => {
+		console.log(
+			"[-] Search Symbols",
+			userInput,
+			exchange,
+			symbolType,
+			onResultReadyCallback
+		);
 		const symbols = await getAllSymbols();
-		const newSymbols = symbols.filter(symbol => {
-			const isExchangeValid = exchange === '' || symbol.exchange === exchange;
-			const isFullSymbolContainsInput = symbol.full_name
-				.toLowerCase()
-				.indexOf(userInput.toLowerCase()) !== -1;
+		const newSymbols = symbols.filter((symbol) => {
+			const isExchangeValid = exchange === "" || symbol.exchange === exchange;
+			const isFullSymbolContainsInput =
+				symbol.full_name.toLowerCase().indexOf(userInput.toLowerCase()) !== -1;
 			return isExchangeValid && isFullSymbolContainsInput;
 		});
 		onResultReadyCallback(newSymbols);
@@ -88,94 +71,87 @@ export default {
 	resolveSymbol: async (
 		symbolName,
 		onSymbolResolvedCallback,
-		onResolveErrorCallback,
+		onResolveErrorCallback
 	) => {
-		const symbols = await getAllSymbols();
-		const symbolItem = symbols.find(({
-			full_name,
-		}) => full_name === symbolName);
-		if (!symbolItem) {
-			onResolveErrorCallback('cannot resolve symbol');
-			return;
-		}
+
+		// const symbols = await getAllSymbols();
+		// const symbolItem = symbols.find(
+		// 	({ full_name }) => full_name === symbolName
+		// );
+		// if (!symbolItem) {
+		// 	onResolveErrorCallback("cannot resolve symbol");
+		// 	return;
+		// }
 		const symbolInfo = {
-			ticker: symbolItem.full_name,
-			name: symbolItem.symbol,
-			description: symbolItem.description,
-			type: symbolItem.type,
-			session: '24x7',
-			timezone: 'Etc/UTC',
-			exchange: symbolItem.exchange,
+			ticker: 'ETHUSD',
+			name: 'ETHUSD',
+			description: 'ETHUSD',
+			type: 'crypto',
+			session: "24x7",
+			timezone: "Etc/UTC",
+			exchange: "Buffer",
 			minmov: 1,
 			pricescale: 100,
-			has_intraday: false,
+			has_intraday: true,
 			has_no_volume: true,
 			has_weekly_and_monthly: false,
-			supported_resolutions: configurationData.supported_resolutions,
+			supported_resolutions: ['4H', '1D'],
 			volume_precision: 2,
-			data_status: 'streaming',
+			data_status: "streaming",
 		};
 
 		onSymbolResolvedCallback(symbolInfo);
 	},
 
-	getBars: async (symbolInfo, resolution, periodParams, onHistoryCallback, onErrorCallback) => {
+	getBars: async (
+		symbolInfo,
+		resolution,
+		periodParams,
+		onHistoryCallback,
+		onErrorCallback
+	) => {
 		const { from, to, firstDataRequest } = periodParams;
 		const parsedSymbol = parseFullSymbol(symbolInfo.full_name);
-		const urlParameters = {
-			e: parsedSymbol.exchange,
-			fsym: parsedSymbol.fromSymbol,
-			tsym: parsedSymbol.toSymbol,
-			toTs: to,
-			limit: 2000,
-		};
-		const query = Object.keys(urlParameters)
-			.map(name => `${name}=${encodeURIComponent(urlParameters[name])}`)
-			.join('&');
-		try {
-			const tempData = await fetch(`https://api-v2.buffer.finance/binary/ETH/tickers?environment=mumbai-test`);
-			const d = await tempData.json();
 
-			/*
-			
-			5: {time: 1658906015, high: 1466.27, low: 0, open: 0, close: 1466.27}
-			*/
+
+		try {
+			const tempData = await fetch(
+				`https://api-v2.buffer.finance/binary/ETH/tickers?environment=mumbai-test`
+			);
+			const d = await tempData.json();
 
 
 			const data = await makeApiRequest(`data/histoday?${query}`);
-			if (data.Response && data.Response === 'Error' || data.Data.length === 0) {
-				// "noData" should be set if there is no data in the requested period.
-				onHistoryCallback([], {
-					noData: true,
-				});
-				return;
-			}
+
 			let bars = [];
 			const n = d.length;
-			console.log(from, 'from');
-			console.log(to, 'to');
+			console.log(from, "from");
+			console.log(to, "to");
 
 			d.forEach((bar, idx) => {
 				if (bar.time >= from && bar.time < to) {
-					bars = [...bars, {
-						time: bar.time * 1000,
-						low: bar.low,
-						isBarClosed: (idx < n - 1) ? true : false,
-						isLastBar: (idx == n - 1) ? true : false,
-						high: bar.high,
-						open: bar.open,
-						close: bar.close,
-					}];
+					bars = [
+						...bars,
+						{
+							time: bar.time * 1000,
+							low: bar.low,
+							isBarClosed: idx < n - 1 ? true : false,
+							isLastBar: idx == n - 1 ? true : false,
+							high: bar.high,
+							open: bar.open,
+							close: bar.close,
+						},
+					];
 				}
 			});
-			console.log(`bars: `, bars);
 
-
-			if (firstDataRequest) {
+			// if (firstDataRequest) {
+			if (bars.length)
 				lastBarsCache.set(symbolInfo.full_name, {
 					...bars[bars.length - 1],
 				});
-			}
+
+			// }
 			onHistoryCallback(bars, {
 				noData: false,
 			});
@@ -189,16 +165,43 @@ export default {
 		resolution,
 		onRealtimeCallback,
 		subscribeUID,
-		onResetCacheNeededCallback,
+		onResetCacheNeededCallback
 	) => {
-		subscribeOnStream(
-			symbolInfo,
-			resolution,
-			onRealtimeCallback,
-			subscribeUID,
-			onResetCacheNeededCallback,
-			lastBarsCache.get(symbolInfo.full_name),
-		);
+		setInterval(async () => {
+			const lastBlock = lastBarsCache.get(symbolInfo.full_name);
+
+			const data = await fetch(
+				"https://api-v2.buffer.finance/binary/ETH/tickers/latest?environment=mumbai-test"
+			);
+			const latestData = await data.json();
+			let updatedBlock = {
+				close: latestData.close,
+				high: latestData.high,
+				low: latestData.low,
+				open: lastBlock.open,
+				time: lastBlock.time,
+			};
+
+			onRealtimeCallback(updatedBlock);
+		}, 1000);
+		// console.log(`symbolInfo,
+		// resolution,
+		// onRealtimeCallback,
+		// subscribeUID,
+		// onResetCacheNeededCallback,: `, symbolInfo,
+		// 	resolution,
+		// 	onRealtimeCallback,
+		// 	subscribeUID,
+		// 	onResetCacheNeededCallback);
+
+		// subscribeOnStream(
+		// 	symbolInfo,
+		// 	resolution,
+		// 	onRealtimeCallback,
+		// 	subscribeUID,
+		// 	onResetCacheNeededCallback,
+		// 	lastBarsCache.get(symbolInfo.full_name),
+		// );
 	},
 
 	unsubscribeBars: (subscriberUID) => {

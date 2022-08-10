@@ -99,7 +99,6 @@ export function subscribeOnStream(
 		handlers: [handler],
 	};
 	channelToSubscription.set(channelString, subscriptionItem);
-	console.log('[subscribeBars]: Subscribe to streaming. Channel:', channelString);
 	socket.emit('SubAdd', { subs: [channelString] });
 }
 
